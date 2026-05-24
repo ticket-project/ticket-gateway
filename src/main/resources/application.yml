@@ -1,0 +1,25 @@
+server:
+  port: ${GATEWAY_PORT:8000}
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: ticket-gateway
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+ticket:
+  gateway:
+    ticket-api-uri: ${TICKET_API_URI:http://localhost:8080}
+    ticket-websocket-uri: ${TICKET_API_WS_URI:http://localhost:8080}
+    queue-uri: ${TICKET_QUEUE_URI:http://localhost:8090}
+    cors:
+      allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}
