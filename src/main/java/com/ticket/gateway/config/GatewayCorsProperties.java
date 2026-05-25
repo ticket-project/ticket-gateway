@@ -8,7 +8,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "ticket.gateway.cors")
 public class GatewayCorsProperties {
 
-    private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:3000"));
+    private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:3000", "https://oneticket.site"));
 
     public List<String> getAllowedOrigins() {
         return allowedOrigins;

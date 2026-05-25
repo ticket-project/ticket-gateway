@@ -17,7 +17,12 @@ public class GatewayCorsConfig {
         configuration.setAllowedOrigins(properties.getAllowedOrigins());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setExposedHeaders(List.of("Authorization", "X-Order-Key"));
+        configuration.setExposedHeaders(List.of(
+                "Authorization",
+                "X-Order-Key",
+                "X-Queue-Session",
+                "X-Admission-Token"
+        ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
