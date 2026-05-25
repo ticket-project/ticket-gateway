@@ -16,26 +16,18 @@ import static org.springframework.web.servlet.function.RequestPredicates.path;
 public class GatewayRoutesConfig {
 
     @Bean
-    public RouterFunction<ServerResponse> ticketQueueRoute(final GatewayBackendProperties properties) {
+    public RouterFunction<ServerResponse> gatewayRoutes(final GatewayBackendProperties properties) {
         return route("ticket-queue")
                 .route(path("/api/v1/queue/**"), http())
                 .before(uri(properties.getQueueUri()))
-                .build();
-    }
-
-    @Bean
-    public RouterFunction<ServerResponse> ticketWebsocketRoute(final GatewayBackendProperties properties) {
-        return route("ticket-api-websocket")
-                .route(path("/ws/**"), http())
-                .before(uri(properties.getTicketWebsocketUri()))
-                .build();
-    }
-
-    @Bean
-    public RouterFunction<ServerResponse> ticketApiRoute(final GatewayBackendProperties properties) {
-        return route("ticket-api")
-                .route(path("/api/**"), http())
-                .before(uri(properties.getTicketApiUri()))
-                .build();
+                .build()
+                .and(route("ticket-api-websocket")
+                        .route(path("/ws/**"), http())
+                        .before(uri(properties.getTicketWebsocketUri()))
+                        .build())
+                .and(route("ticket-api")
+                        .route(path("/api/**"), http())
+                        .before(uri(properties.getTicketApiUri()))
+                        .build());
     }
 }
