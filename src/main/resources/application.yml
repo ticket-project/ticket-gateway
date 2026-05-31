@@ -16,6 +16,18 @@ management:
       probes:
         enabled: true
 
+security:
+  jwt:
+    issuer: ${JWT_ISSUER:ticket}
+    secret-key: ${JWT_SECRET:0123456789abcdef0123456789abcdef}
+    access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:1800}
+  internal-auth:
+    issuer: ${INTERNAL_AUTH_ISSUER:ticket-gateway}
+    secret-key: ${INTERNAL_AUTH_SECRET_KEY:abcdefabcdefabcdefabcdefabcdef12}
+    expiration-seconds: ${INTERNAL_AUTH_EXPIRATION_SECONDS:60}
+    core-audience: ${INTERNAL_AUTH_CORE_AUDIENCE:ticket-core}
+    queue-audience: ${INTERNAL_AUTH_QUEUE_AUDIENCE:ticket-queue}
+
 ticket:
   gateway:
     ticket-api-uri: ${TICKET_API_URI:http://localhost:8080}

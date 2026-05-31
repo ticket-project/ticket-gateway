@@ -2,3 +2,6 @@
 .idea/
 build/
 !gradle/wrapper/gradle-wrapper.jar
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
