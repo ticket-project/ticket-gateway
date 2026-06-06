@@ -25,7 +25,7 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation 'com.ticket:ticket-support-security:0.0.1-SNAPSHOT'
+    implementation 'com.ticket:ticket-common-token:0.0.1-SNAPSHOT'
 
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc'

@@ -1,10 +1,10 @@
 package com.ticket.gateway;
 
-import com.ticket.support.security.internalauth.InternalAuthClaims;
-import com.ticket.support.security.internalauth.InternalAuthTokenProperties;
-import com.ticket.support.security.internalauth.InternalAuthTokenService;
-import com.ticket.support.security.jwt.JwtAccessTokenIssuer;
-import com.ticket.support.security.jwt.JwtProperties;
+import com.ticket.support.token.passport.PassportTokenClaims;
+import com.ticket.support.token.passport.PassportTokenProperties;
+import com.ticket.support.token.passport.PassportTokenService;
+import com.ticket.support.token.jwt.JwtAccessTokenIssuer;
+import com.ticket.support.token.jwt.JwtProperties;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import com.ticket.gateway.config.GatewayAuthFilter;
@@ -133,7 +133,7 @@ class TicketGatewayApplicationTest {
                 .getHeader("X-Received-Internal-Auth");
 
         assertThat(forwardedInternalAuth).startsWith("Bearer ");
-        InternalAuthClaims claims = internalAuthVerifier("ticket-queue")
+        PassportTokenClaims claims = internalAuthVerifier("ticket-queue")
                 .verify(forwardedInternalAuth.substring("Bearer ".length()));
         assertThat(claims.memberId()).isEqualTo(7L);
         assertThat(claims.role()).isEqualTo("MEMBER");
@@ -213,13 +213,13 @@ class TicketGatewayApplicationTest {
         return new JwtAccessTokenIssuer(properties).issue(memberId, role);
     }
 
-    private InternalAuthTokenService internalAuthVerifier(final String audience) {
-        InternalAuthTokenProperties properties = new InternalAuthTokenProperties(
+    private PassportTokenService internalAuthVerifier(final String audience) {
+        PassportTokenProperties properties = new PassportTokenProperties(
                 "ticket-gateway",
                 audience,
                 INTERNAL_AUTH_SECRET_KEY,
                 60L
         );
-        return new InternalAuthTokenService(properties);
+        return new PassportTokenService(properties);
     }
 }

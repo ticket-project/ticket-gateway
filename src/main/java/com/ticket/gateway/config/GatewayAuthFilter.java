@@ -1,8 +1,8 @@
 package com.ticket.gateway.config;
 
-import com.ticket.support.security.internalauth.InternalAuthTokenService;
-import com.ticket.support.security.jwt.JwtMemberClaims;
-import com.ticket.support.security.jwt.JwtTokenVerifier;
+import com.ticket.support.token.passport.PassportTokenService;
+import com.ticket.support.token.jwt.JwtMemberClaims;
+import com.ticket.support.token.jwt.JwtTokenVerifier;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,10 +19,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 public class GatewayAuthFilter extends OncePerRequestFilter {
 
@@ -31,14 +28,14 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenVerifier accessTokenVerifier;
-    private final InternalAuthTokenService coreTokenService;
-    private final InternalAuthTokenService queueTokenService;
+    private final PassportTokenService coreTokenService;
+    private final PassportTokenService queueTokenService;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public GatewayAuthFilter(
             final JwtTokenVerifier accessTokenVerifier,
-            final InternalAuthTokenService coreTokenService,
-            final InternalAuthTokenService queueTokenService
+            final PassportTokenService coreTokenService,
+            final PassportTokenService queueTokenService
     ) {
         this.accessTokenVerifier = Objects.requireNonNull(accessTokenVerifier, "accessTokenVerifier must not be null");
         this.coreTokenService = Objects.requireNonNull(coreTokenService, "coreTokenService must not be null");
@@ -109,9 +106,8 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
     }
 
     private boolean isCorePublicRequest(final String method, final String path) {
-        if (matches(path, "/", "/api/swagger-ui.html", "/api/swagger-ui/**", "/api/api-docs/**",
-                "/ws/**", "/api/images/**", "/actuator/health", "/actuator/health/**",
-                "/actuator/info", "/actuator/prometheus")) {
+        // Only reached when path starts with "/api/" (see requiresAuthentication), so non-/api/ paths are omitted.
+        if (matches(path, "/api/swagger-ui.html", "/api/swagger-ui/**", "/api/api-docs/**", "/api/images/**")) {
             return true;
         }
         if (matches(path, "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/refresh",
@@ -135,7 +131,7 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
         return false;
     }
 
-    private InternalAuthTokenService tokenService(final RouteTarget routeTarget) {
+    private PassportTokenService tokenService(final RouteTarget routeTarget) {
         return switch (routeTarget) {
             case CORE -> coreTokenService;
             case QUEUE -> queueTokenService;
@@ -151,12 +147,11 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
     }
 
     private HttpServletRequest withoutInternalAuth(final HttpServletRequest request) {
-        return new HeaderOverrideRequest(request, Map.of(), Set.of(INTERNAL_AUTH_HEADER));
+        return new InternalAuthHeaderRequest(request, null);
     }
 
     private HttpServletRequest withInternalAuth(final HttpServletRequest request, final String internalAuth) {
-        return new HeaderOverrideRequest(request, Map.of(INTERNAL_AUTH_HEADER, List.of(internalAuth)),
-                Set.of(INTERNAL_AUTH_HEADER));
+        return new InternalAuthHeaderRequest(request, internalAuth);
     }
 
     private enum RouteTarget {
@@ -164,41 +159,31 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
         QUEUE
     }
 
-    private static final class HeaderOverrideRequest extends HttpServletRequestWrapper {
+    /**
+     * Overrides only the {@link #INTERNAL_AUTH_HEADER} header: absent when {@code value} is null,
+     * otherwise set to {@code value}. Any client-supplied value is never exposed downstream.
+     */
+    private static final class InternalAuthHeaderRequest extends HttpServletRequestWrapper {
 
-        private final Map<String, List<String>> setHeaders;
-        private final Set<String> removedHeaderNames;
+        private final String value;
 
-        private HeaderOverrideRequest(
-                final HttpServletRequest request,
-                final Map<String, List<String>> setHeaders,
-                final Set<String> removedHeaderNames
-        ) {
+        private InternalAuthHeaderRequest(final HttpServletRequest request, final String value) {
             super(request);
-            this.setHeaders = setHeaders;
-            this.removedHeaderNames = normalize(removedHeaderNames);
+            this.value = value;
         }
 
         @Override
         public String getHeader(final String name) {
-            List<String> values = getSetHeaderValues(name);
-            if (values != null) {
-                return values.isEmpty() ? null : values.getFirst();
-            }
-            if (isRemoved(name)) {
-                return null;
+            if (isInternalAuth(name)) {
+                return value;
             }
             return super.getHeader(name);
         }
 
         @Override
         public Enumeration<String> getHeaders(final String name) {
-            List<String> values = getSetHeaderValues(name);
-            if (values != null) {
-                return Collections.enumeration(values);
-            }
-            if (isRemoved(name)) {
-                return Collections.emptyEnumeration();
+            if (isInternalAuth(name)) {
+                return value == null ? Collections.emptyEnumeration() : Collections.enumeration(List.of(value));
             }
             return super.getHeaders(name);
         }
@@ -209,37 +194,18 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
             Enumeration<String> original = super.getHeaderNames();
             while (original.hasMoreElements()) {
                 String name = original.nextElement();
-                if (!isRemoved(name)) {
+                if (!isInternalAuth(name)) {
                     names.add(name);
                 }
             }
-            names.addAll(setHeaders.keySet());
+            if (value != null) {
+                names.add(INTERNAL_AUTH_HEADER);
+            }
             return Collections.enumeration(names);
         }
 
-        private List<String> getSetHeaderValues(final String name) {
-            for (Map.Entry<String, List<String>> entry : setHeaders.entrySet()) {
-                if (entry.getKey().equalsIgnoreCase(name)) {
-                    return entry.getValue();
-                }
-            }
-            return null;
-        }
-
-        private boolean isRemoved(final String name) {
-            return removedHeaderNames.contains(normalize(name));
-        }
-
-        private static Set<String> normalize(final Set<String> values) {
-            Set<String> normalized = new LinkedHashSet<>();
-            for (String value : values) {
-                normalized.add(normalize(value));
-            }
-            return normalized;
-        }
-
-        private static String normalize(final String value) {
-            return value.toLowerCase(Locale.ROOT);
+        private boolean isInternalAuth(final String name) {
+            return INTERNAL_AUTH_HEADER.equalsIgnoreCase(name);
         }
     }
 }

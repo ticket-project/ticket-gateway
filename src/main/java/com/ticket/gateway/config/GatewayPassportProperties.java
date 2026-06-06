@@ -3,7 +3,7 @@ package com.ticket.gateway.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "security.internal-auth")
-public class GatewayInternalAuthProperties {
+public class GatewayPassportProperties {
 
     private String issuer = "ticket-gateway";
     private String secretKey;
