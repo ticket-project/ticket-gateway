@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+group = property('projectGroup')
+version = property('applicationVersion')
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(Integer.parseInt(property('javaVersion')))
+    }
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${property('springCloudVersion')}"
+    }
+}
+
+dependencies {
+    implementation 'com.ticket:ticket-common-security-token:0.0.1-SNAPSHOT'
+
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc'
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
