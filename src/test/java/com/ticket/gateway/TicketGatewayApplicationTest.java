@@ -147,6 +147,33 @@ class TicketGatewayApplicationTest {
     }
 
     @Test
+    void protected_queue_join_exchanges_access_token_to_queue_internal_auth_token() throws Exception {
+        String accessToken = accessToken(7L, "MEMBER");
+
+        String forwardedInternalAuth = mockMvc.perform(post("/api/v1/queue/performances/1/join")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                        .header(INTERNAL_AUTH_HEADER, "Bearer forged-internal-token"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Test-Backend", "queue"))
+                .andReturn()
+                .getResponse()
+                .getHeader("X-Received-Internal-Auth");
+
+        assertThat(forwardedInternalAuth).startsWith("Bearer ");
+        PassportTokenClaims claims = internalAuthVerifier("ticket-queue")
+                .verify(forwardedInternalAuth.substring("Bearer ".length()));
+        assertThat(claims.memberId()).isEqualTo(7L);
+        assertThat(claims.role()).isEqualTo("MEMBER");
+        assertThat(claims.audience()).isEqualTo("ticket-queue");
+    }
+
+    @Test
+    void protected_queue_join_requires_access_token() throws Exception {
+        mockMvc.perform(post("/api/v1/queue/performances/1/join"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void websocket_route_is_forwarded_to_ticket_backend_for_frontend_main() throws Exception {
         mockMvc.perform(get("/ws/info"))
                 .andExpect(status().isOk())

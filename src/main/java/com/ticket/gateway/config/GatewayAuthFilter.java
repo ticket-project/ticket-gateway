@@ -93,6 +93,9 @@ public class GatewayAuthFilter extends OncePerRequestFilter {
         if (HttpMethod.OPTIONS.matches(method)) {
             return false;
         }
+        if (pathMatcher.match("/api/v1/queue/performances/*/join", path)) {
+            return HttpMethod.POST.matches(method);
+        }
         if (pathMatcher.match("/api/v1/queue/performances/*/enter", path)) {
             return HttpMethod.POST.matches(method);
         }
